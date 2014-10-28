@@ -1,0 +1,19 @@
+name: MFFreeze
+main: Minifixio\mffreeze\MFFreeze
+version: 0.0.1
+api: [1.0.0, 1.1.0]
+description: Freeze someone
+commands:
+    mffreeze:
+        usage: /mffreeze <player>
+        description: Freezes a player so they cant move
+    mfunfreeze:
+        usage: /mfunfreeze <player>
+        description: Unfreezes a player
+permissions:
+    mffreeze.mffreeze:
+        default: op
+        description: Allows you to freeze others
+    mffreeze.mfunfreeze:
+        default: op
+        description: Allows you to unfreeze others
