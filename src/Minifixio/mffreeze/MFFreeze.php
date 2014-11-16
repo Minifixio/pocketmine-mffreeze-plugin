@@ -15,7 +15,12 @@ class MFFreeze extends PluginBase {
     public $freezemanager;
     
     public function onEnable(){
-        $this->freezemanager = new FreezeManager($this);
+    	
+    	@mkdir($this->getDataFolder());
+    	$this->saveDefaultConfig();
+    	$activeForWorlds = array_map('trim', explode(",", $this->getConfig()->get("activeForWorlds")));
+    	
+        $this->freezemanager = new FreezeManager($this, $activeForWorlds);
         
         $time = 1 * 20;
         
@@ -29,8 +34,7 @@ class MFFreeze extends PluginBase {
     public function onCommand(CommandSender $sender, Command $command, $label, array $args) {
         
         $cmd = strtolower($command->getName());
-        //tip: Using $command->getName() allows use for aliases. Using $label would make aliases useless.
-        $this->getServer()->broadcastMessage("let's go my friends 2!");
+
         switch ($cmd){
                            
             case "mffreeze":

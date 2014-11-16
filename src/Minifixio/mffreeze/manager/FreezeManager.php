@@ -14,6 +14,7 @@ use Minifixio\mffreeze\manager\FreezeInfo;
 class FreezeManager implements Listener {
     
     public $plugin;
+    private $activeForWorlds;
     public $frozen = array();
     public $frozenInfo = array();
     public $freezerTimeInfo = array();
@@ -22,8 +23,9 @@ class FreezeManager implements Listener {
     const FREEZE_TIME_IN_SECONDS = 3;
     const FREEZE_RIGHT_DELAY_IN_SECONDS = 15;
     
-    public function __construct(PluginBase $plugin) {
+    public function __construct(PluginBase $plugin, $activeForWorlds) {
         $this->plugin = $plugin;
+        $this->activeForWorlds = $activeForWorlds;
         $this->plugin->getServer()->getPluginManager()->registerEvents($this, $this->plugin);
     }
     
@@ -38,7 +40,7 @@ class FreezeManager implements Listener {
         $freezeInfo->victim = $player;
         
         if (in_array($id, $this->frozen)){
-            $sender->sendMessage("Player '".$name."' is already frozen!");
+            $sender->sendMessage($this->formatPlayerMessage($name." est déjà congelé"));
         } else {
             $this->frozenInfo[$name] = $freezeInfo;
             $this->frozen[$name] = $id;
@@ -52,11 +54,11 @@ class FreezeManager implements Listener {
         if (in_array($id, $this->frozen)){
             $index = array_search($id, $this->frozen);
             if ($index === false){
-                $sender->sendMessage("Player '".$name."' wasn't frozen!");
+                $sender->sendMessage($this->formatPlayerMessage($name." n'était pas congelé"));
             } else {
                 unset($this->frozen[$index]);
-                $sender->sendMessage("Player '".$name."' has been unfrozen.");
-                $player->sendMessage("You have been unfrozen.");
+                $sender->sendMessage($this->formatPlayerMessage($name." a été congelé"));
+                $player->sendMessage($this->formatPlayerMessage("Vous avez été décongelé"));
             }
         }
     }
@@ -72,9 +74,9 @@ class FreezeManager implements Listener {
     	$now = new \DateTime();
     	foreach ($this->frozenInfo as $key => $freezeInfo) {
     		$remainingFreezeTime = $freezeInfo->freezeTime + self::FREEZE_TIME_IN_SECONDS - $now->getTimestamp();
-    		$freezeInfo->victim->sendMessage("Decongelation dans " . $remainingFreezeTime . " secondes ...");
+    		$freezeInfo->victim->sendMessage($this->formatPlayerMessage("Décongelation dans " . $remainingFreezeTime . " secondes ..."));
     		if($now->getTimestamp() - $freezeInfo->freezeTime >= self::FREEZE_TIME_IN_SECONDS){
-    			$freezeInfo->victim->sendMessage("Vous avez ete decongele");
+    			$freezeInfo->victim->sendMessage($this->formatPlayerMessage("Vous avez ete décongelé"));
     			unset($this->frozen[$key]);
     			unset($this->frozenInfo[$key]);
     		}
@@ -96,20 +98,19 @@ class FreezeManager implements Listener {
         }
     }
     
-    public function onPlayerInteract(PlayerInteractEvent $event){
-    	//$this->plugin->getServer()->broadcastMessage("Interact ! : " . $event->getPlayer()->getName() . " sur " . $event->getBlock());
-    	//$this->plugin->getServer()->broadcastMessage($event->getBlock()->x . " " . $event->getBlock()->y);
-    }
     
     /**
      * When a player damages another player with the freezing item
      * @param EntityDamageByEntityEvent $event
      */
     public function onEntityDamageByEntity(EntityDamageByEntityEvent $event){
+    	    	
+    	$this->logOnConsole($this->activeForWorlds);
+    	
     	// Check that its an entity by entity damage
     	if($event instanceof EntityDamageByEntityEvent){
 	    	$damager = $event->getDamager();
-	    	$victim = $event->getEntity();
+	    	$victim = $event->getEntity();  	
 	    	
 	    	// Check that both entities are players
 	    	if($damager instanceof Player && $victim instanceof Player){
@@ -117,17 +118,24 @@ class FreezeManager implements Listener {
 	    		
 	    		// Check that the player has the right item
 	    		if($itemInHand->getID() == self::FREEZING_ITEM_ID){
+
+	    			// Check that MFFreeze is activated for current world
+	    			$worldName = $event->getEntity()->getLevel()->getFolderName();
+	    			if($worldName != "world"){
+	    				$damager->sendMessage($this->formatPlayerMessage("Congélation désactivée pour ce monde"));
+	    				return;
+	    			}	    			
 	    			
 	    			if(isset($this->freezerTimeInfo[$damager->getName()])){
 	    				$now = new \DateTime();
 	    				$timeSinceLastFreeze = $now->getTimestamp() - $this->freezerTimeInfo[$damager->getName()]; 
 	    				if($timeSinceLastFreeze < self::FREEZE_RIGHT_DELAY_IN_SECONDS){
-	    					$damager->sendMessage("Impossible de freezer un joueur avant " . (self::FREEZE_RIGHT_DELAY_IN_SECONDS - $timeSinceLastFreeze) . " secondes !");
+	    					$damager->sendMessage($this->formatPlayerMessage("Impossible de congeler un joueur avant " . (self::FREEZE_RIGHT_DELAY_IN_SECONDS - $timeSinceLastFreeze) . " secondes !"));
 	    					return ;
 	    				}
 	    			}
-    				$damager->sendMessage("Vous avez freeze " . $victim->getName());
-    				$victim->sendMessage("Vous avez ete freeze par " . $damager->getName());
+    				$damager->sendMessage($this->formatPlayerMessage("Vous avez congelé " . $victim->getName()));
+    				$victim->sendMessage($this->formatPlayerMessage("Vous avez été congelé par " . $damager->getName()));
     				$this->freezePlayer($victim, $damager);
 	    		}
 	    	}
@@ -138,4 +146,7 @@ class FreezeManager implements Listener {
     	$this->plugin->getServer()->broadcastMessage($message);
     }
     
+    private function formatPlayerMessage($message){
+    	return "/ " . $message . "\n";
+    }
 }

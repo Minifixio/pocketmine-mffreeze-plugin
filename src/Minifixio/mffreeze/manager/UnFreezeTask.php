@@ -20,6 +20,5 @@ class UnFreezeTask extends PluginTask{
 	
 	public function onRun($currentTick){
 		$this->freezemanager->unFreezePlayers();
-		//Server::getInstance()->broadcastMessage("Unfreeze Task");
 	}
 }
